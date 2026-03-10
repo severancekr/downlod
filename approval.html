@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에스텍 차세대 결재시스템</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    body { background-color: #0d1117; color: #ffffff; font-family: 'Pretendard', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { background-color: #161b22; border: 2px solid #f1c40f; padding: 40px 30px; border-radius: 12px; text-align: center; max-width: 450px; width: 100%; box-shadow: 0 10px 30px rgba(241, 196, 15, 0.1); }
+    .spinner { border: 4px solid rgba(241, 196, 15, 0.3); width: 50px; height: 50px; border-radius: 50%; border-left-color: #f1c40f; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .btn { padding: 12px 25px; background: #f1c40f; color: #000; border: none; border-radius: 8px; font-weight: 800; font-size: 16px; cursor: pointer; margin-top: 20px; text-decoration: none; display: inline-block; transition: 0.2s; }
+    .btn:hover { background: #d4ac0d; }
+  </style>
+</head>
+<body>
+
+  <div id="loadingUI" class="card">
+    <div class="spinner"></div>
+    <h2 style="color: #f1c40f;">결재 처리 중입니다...</h2>
+    <p style="color: #8b949e; font-size: 14px;">잠시만 기다려주세요. 서버와 안전하게 통신하고 있습니다.</p>
+  </div>
+
+  <div id="resultUI" class="card" style="display: none;">
+    <div id="icon" style="font-size: 40px; margin-bottom: 10px;">✔️</div>
+    <h1 id="resTitle" style="color: #f1c40f; font-size: 26px; font-weight: 800; margin: 0 0 15px 0;"></h1>
+    <p id="resSubtitle" style="color: #ffffff; font-size: 16px; font-weight: 600; line-height: 1.6; margin: 0 0 15px 0;"></p>
+    
+    <div style="background-color: #0d1117; border-left: 4px solid #f1c40f; padding: 15px; border-radius: 4px; text-align: left; margin-bottom: 20px;">
+      <p style="color: #8b949e; font-size: 13px; margin: 0 0 5px 0;">결재 문서</p>
+      <p id="resFormType" style="color: #ffffff; font-size: 15px; font-weight: bold; margin: 0 0 10px 0;"></p>
+      <p style="color: #8b949e; font-size: 13px; margin: 0 0 5px 0;">결재자 처리 내역</p>
+      <p id="resApproverMsg" style="color: #f1c40f; font-size: 14px; font-weight: bold; margin: 0;"></p>
+    </div>
+    
+    <button onclick="goBackOrClose()" class="btn">창 닫기 / 이메일로 돌아가기</button>
+  </div>
+
+  <script>
+    function goBackOrClose() {
+      if (window.history.length > 1) { window.history.back(); } 
+      else { window.close(); }
+    }
+
+    window.onload = function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const action = urlParams.get('action');
+      const level = urlParams.get('level');
+      const uuid = urlParams.get('uuid');
+      const gasUrl = urlParams.get('gasUrl');
+
+      if (!action || !uuid || !gasUrl) {
+        document.getElementById('loadingUI').style.display = 'none';
+        document.getElementById('resultUI').style.display = 'block';
+        document.getElementById('icon').innerText = "⚠️";
+        document.getElementById('resTitle').innerText = "잘못된 접근";
+        document.getElementById('resSubtitle').innerText = "결재 정보가 누락되었습니다.";
+        return;
+      }
+
+      // 구글 앱스 스크립트 API 호출
+      const apiUrl = `${gasUrl}?action=${action}&level=${level}&uuid=${uuid}&api=true`;
+      
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('loadingUI').style.display = 'none';
+          document.getElementById('resultUI').style.display = 'block';
+          
+          if(data.result === 'success') {
+            document.getElementById('icon').innerText = data.title.includes('승인') ? '✔️' : '❌';
+            document.getElementById('resTitle').innerText = data.title;
+            document.getElementById('resSubtitle').innerText = data.subtitle;
+            document.getElementById('resFormType').innerText = data.formType + " 제출원";
+            document.getElementById('resApproverMsg').innerText = data.approverMsg;
+          } else {
+            document.getElementById('icon').innerText = "❌";
+            document.getElementById('resTitle').innerText = "오류 발생";
+            document.getElementById('resSubtitle').innerText = data.message;
+          }
+        })
+        .catch(error => {
+          document.getElementById('loadingUI').style.display = 'none';
+          document.getElementById('resultUI').style.display = 'block';
+          document.getElementById('icon').innerText = "📡";
+          document.getElementById('resTitle').innerText = "통신 오류";
+          document.getElementById('resSubtitle').innerText = "네트워크 문제로 결과를 가져오지 못했습니다.";
+        });
+    }
+  </script>
+</body>
+</html>
